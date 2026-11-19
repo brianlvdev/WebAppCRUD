@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-theme="corporate">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Conta</title>
+    <link href="{{ url_for('static', filename='daisyui.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='themes.css') }}" rel="stylesheet" type="text/css" />
+    <script src="{{ url_for('static', filename='tailwindcss.js') }}"></script>
+
+</head>
+<body class="min-h-screen bg-base-200 flex items-center justify-center p-4">
+
+    <div class="card w-full max-w-sm bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h1 class="card-title text-2xl justify-center mb-4">Novo Usuário</h1>
+
+            {% if erro %}
+            <div class="alert alert-error text-sm mb-4">
+                <span>{{ erro }}</span>
+            </div>
+            {% endif %}
+
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label class="label"><span class="label-text">Escolha um usuário</span></label>
+                    <input type="text" name="username" class="input input-bordered w-full" required>
+                </div>
+
+                <div>
+                    <label class="label"><span class="label-text">Escolha uma senha</span></label>
+                    <input type="password" name="senha" class="input input-bordered w-full" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-full">Cadastrar</button>
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="{{ url_for('login') }}" class="link link-primary text-sm">Já tenho conta (Fazer login)</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

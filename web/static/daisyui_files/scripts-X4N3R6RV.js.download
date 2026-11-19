@@ -1,0 +1,299 @@
+// src/hydration.ts
+import { h, hydrate } from "preact";
+function hydrateAll(componentTable) {
+  let hydratableElements = document.querySelectorAll("[data-hydrate]");
+  for (let element of hydratableElements) {
+    let { key, props } = JSON.parse(element.getAttribute("data-hydrate"));
+    let component = componentTable[key];
+    if (component == null) {
+      throw new Error(`Unknown component: ${key}. Did you forget to add it to StatefulComponents?`);
+    }
+    hydrate(h(component, props), element);
+    element.removeAttribute("data-hydrate");
+  }
+}
+
+// src/components/home-nav.tsx
+import "preact";
+import { useState, useEffect } from "preact/hooks";
+import { jsx, jsxs } from "preact/jsx-runtime";
+function HomeNav({ items }) {
+  let [currentSectionId, setCurrentSectionId] = useState(null);
+  useEffect(() => {
+    function handleScroll() {
+      let sections = document.querySelectorAll("main section");
+      let currentSectionId2;
+      let lastSection = sections[sections.length - 1];
+      if (lastSection != null && window.scrollY + window.innerHeight >= document.body.scrollHeight - 20) {
+        currentSectionId2 = lastSection.id;
+      } else {
+        for (let section of sections) {
+          let rect = section.getBoundingClientRect();
+          if (rect.top < 120 && rect.bottom > 40) {
+            currentSectionId2 = section.id;
+            break;
+          }
+        }
+        if (currentSectionId2 == null) {
+          currentSectionId2 = sections[0]?.id;
+        }
+      }
+      setCurrentSectionId(currentSectionId2);
+    }
+    handleScroll();
+    document.addEventListener("scroll", handleScroll);
+    return () => document.removeEventListener("scroll", handleScroll);
+  }, []);
+  let markerTop = 0;
+  if (currentSectionId != null) {
+    let navItem = document.getElementById(`${currentSectionId}-nav-item`);
+    markerTop = navItem.offsetTop;
+  }
+  return /* @__PURE__ */ jsxs("nav", { class: "relative border-l-1 border-gray-300 dark:border-dark-border-strong text-base text-slate-600 dark:text-dark-secondary", children: [
+    /* @__PURE__ */ jsx("div", { class: "absolute w-1 h-6.5 transition-all duration-300 bg-gray-600 dark:bg-dark-secondary", style: { top: markerTop } }),
+    /* @__PURE__ */ jsx("ol", { children: Object.entries(items).map(([id, title]) => /* @__PURE__ */ jsx("li", { id: `${id}-nav-item`, class: id === currentSectionId ? "my-2 pl-8 text-slate-900 dark:text-dark-foreground" : "my-2 pl-8", children: /* @__PURE__ */ jsx("a", { href: `#${id}`, children: title }) })) })
+  ] });
+}
+
+// src/components/run-demo.tsx
+import "preact";
+import { useRef, useState as useState2 } from "preact/hooks";
+import { jsx as jsx2, jsxs as jsxs2 } from "preact/jsx-runtime";
+var confettiDemoSource = `import confetti from "canvas-confetti";
+
+confetti({ particleCount: 80, spread: 70 });`;
+function RunDemo({ runUrl }) {
+  let [state, setState] = useState2("idle");
+  let [slowRun, setSlowRun] = useState2(false);
+  let containerRef = useRef(null);
+  async function runExample() {
+    let container = containerRef.current;
+    if (state === "running" || container == null) {
+      return;
+    }
+    setState("running");
+    let slowRunShownAt = 0;
+    let slowRunTimer = setTimeout(() => {
+      slowRunShownAt = Date.now();
+      setSlowRun(true);
+    }, 300);
+    try {
+      container.replaceChildren();
+      let script = document.createElement("script");
+      script.type = "text/ts";
+      script.setAttribute("data-filename", "/confetti-demo.ts");
+      script.textContent = confettiDemoSource;
+      container.append(script);
+      let runner = await import(runUrl);
+      await runner.default(container);
+      setState("idle");
+    } catch (error) {
+      console.error(error);
+      setState("error");
+    } finally {
+      clearTimeout(slowRunTimer);
+      if (slowRunShownAt === 0) {
+        setSlowRun(false);
+      } else {
+        let remaining = Math.max(0, 500 - (Date.now() - slowRunShownAt));
+        setTimeout(() => setSlowRun(false), remaining);
+      }
+    }
+  }
+  return /* @__PURE__ */ jsxs2("div", { class: "mt-3 flex items-center gap-4", children: [
+    /* @__PURE__ */ jsx2(
+      "button",
+      {
+        type: "button",
+        class: `px-4 py-2 text-sm font-semibold border border-hairline-strong dark:border-dark-border-strong bg-paper-alt dark:bg-dark-panel ${slowRun ? "opacity-50 cursor-default" : "hover:bg-slate-200 dark:hover:bg-dark-border cursor-pointer"}`,
+        disabled: state === "running",
+        onClick: runExample,
+        children: /* @__PURE__ */ jsxs2("span", { class: "grid", children: [
+          /* @__PURE__ */ jsx2("span", { class: "col-start-1 row-start-1 invisible", "aria-hidden": "true", children: "Run this example" }),
+          /* @__PURE__ */ jsx2("span", { class: "col-start-1 row-start-1", children: slowRun ? "Running\u2026" : "Run this example" })
+        ] })
+      }
+    ),
+    state === "error" && /* @__PURE__ */ jsx2("span", { class: "text-sm text-red-600 dark:text-red-400", children: "The example failed to run \u2014 see the console." }),
+    /* @__PURE__ */ jsx2("div", { ref: containerRef, hidden: true })
+  ] });
+}
+
+// src/components/status-checks.tsx
+import "preact";
+import { useEffect as useEffect2, useState as useState3 } from "preact/hooks";
+import { jsx as jsx3, jsxs as jsxs3 } from "preact/jsx-runtime";
+function StatusChecks({ appOrigin, esmOrigin }) {
+  const checks = [
+    {
+      id: "worker",
+      label: "File-serving Worker",
+      detail: "unpkg.com health endpoint",
+      run: async () => {
+        let response = await fetch("/_health", { cache: "no-store" });
+        if (!response.ok || await response.text() !== "OK") throw new Error("health");
+      }
+    },
+    {
+      id: "files",
+      label: "File delivery",
+      detail: "Edge, cache layers, and origin path",
+      run: async () => {
+        let response = await fetch("/ms@2.1.0/package.json", { cache: "no-store" });
+        if (!response.ok) throw new Error("files");
+        await response.text();
+      }
+    },
+    {
+      id: "meta",
+      label: "Metadata API",
+      detail: "?meta listings",
+      run: async () => {
+        let response = await fetch("/ms@2.1.0/?meta", { cache: "no-store" });
+        if (!response.ok) throw new Error("meta");
+        let data = await response.json();
+        if (!Array.isArray(data.files)) throw new Error("meta shape");
+      }
+    },
+    {
+      id: "esm",
+      label: "ES module conversion",
+      detail: "esm.unpkg.com",
+      run: async () => {
+        let response = await fetch(`${esmOrigin}/ms@2.1.0`, { cache: "no-store" });
+        if (!response.ok) throw new Error("esm");
+        await response.text();
+      }
+    },
+    {
+      id: "app",
+      label: "Package browser",
+      detail: "app.unpkg.com (reachability)",
+      run: async () => {
+        await fetch(`${appOrigin}/react@18.3.1`, { mode: "no-cors", cache: "no-store" });
+      }
+    }
+  ];
+  let [results, setResults] = useState3({});
+  useEffect2(() => {
+    let cancelled = false;
+    setResults(Object.fromEntries(checks.map((check) => [check.id, { state: "checking" }])));
+    (async () => {
+      await Promise.all(
+        checks.map(async (check) => {
+          let started = performance.now();
+          try {
+            await check.run();
+            if (!cancelled) {
+              setResults((prev) => ({
+                ...prev,
+                [check.id]: { state: "ok", ms: Math.max(1, Math.round(performance.now() - started)) }
+              }));
+            }
+          } catch {
+            if (!cancelled) {
+              setResults((prev) => ({ ...prev, [check.id]: { state: "fail" } }));
+            }
+          }
+        })
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return /* @__PURE__ */ jsx3("div", { class: "border border-hairline-strong dark:border-dark-border-strong bg-white dark:bg-dark-panel", children: /* @__PURE__ */ jsx3("ul", { children: checks.map((check) => {
+    let result = results[check.id] ?? { state: "checking" };
+    return /* @__PURE__ */ jsxs3(
+      "li",
+      {
+        class: "flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 border-b border-hairline dark:border-dark-border last:border-b-0 text-base",
+        children: [
+          /* @__PURE__ */ jsx3(
+            "span",
+            {
+              "aria-hidden": "true",
+              class: `w-2.5 h-2.5 rounded-full shrink-0 ${result.state === "ok" ? "bg-[#5c8a6f]" : result.state === "fail" ? "bg-[#b8513f]" : "bg-slate-300 dark:bg-dark-border-strong"}`
+            }
+          ),
+          /* @__PURE__ */ jsx3("span", { class: "font-semibold text-ink dark:text-dark-foreground", children: check.label }),
+          /* @__PURE__ */ jsx3("span", { class: "text-slate-600 dark:text-dark-secondary", children: check.detail }),
+          /* @__PURE__ */ jsx3("span", { class: "ml-auto text-sm text-slate-600 dark:text-dark-secondary", children: result.state === "ok" ? "Operational" : result.state === "fail" ? "Not reachable" : "Checking\u2026" })
+        ]
+      },
+      check.id
+    );
+  }) }) });
+}
+
+// src/components/url-builder.tsx
+import "preact";
+import { useState as useState4 } from "preact/hooks";
+import { jsx as jsx4, jsxs as jsxs4 } from "preact/jsx-runtime";
+var link = "inline-link text-accent dark:text-dark-link hover:underline break-all";
+function UrlBuilder({ esmOrigin, origin }) {
+  let [pkg, setPkg] = useState4("preact");
+  let name = pkg.trim() || "preact";
+  let encoded = name.split("/").map((part) => encodeURIComponent(part)).join("/");
+  let fileUrl = `${origin}/${encoded}`;
+  let metaUrl = `${origin}/${encoded}/?meta`;
+  let esmUrl = `${esmOrigin}/${encoded}`;
+  return /* @__PURE__ */ jsxs4("div", { class: "border border-hairline-strong dark:border-dark-border-strong bg-white dark:bg-dark-panel p-4 text-slate-900 dark:text-dark-secondary", children: [
+    /* @__PURE__ */ jsx4("label", { class: "block text-base font-semibold text-ink dark:text-dark-foreground", htmlFor: "url-builder-package", children: "Try it: build a URL" }),
+    /* @__PURE__ */ jsx4(
+      "input",
+      {
+        id: "url-builder-package",
+        type: "text",
+        value: pkg,
+        onInput: (event) => setPkg(event.target.value),
+        placeholder: "package name, e.g. react",
+        class: "mt-2 w-full px-3 py-2 text-base bg-paper dark:bg-dark-page border border-hairline-strong dark:border-dark-border-strong text-ink dark:text-dark-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-deep"
+      }
+    ),
+    /* @__PURE__ */ jsxs4("ul", { class: "mt-3 text-base space-y-1.5", children: [
+      /* @__PURE__ */ jsxs4("li", { children: [
+        "File:",
+        " ",
+        /* @__PURE__ */ jsx4("a", { class: link, href: `/${encoded}`, children: fileUrl })
+      ] }),
+      /* @__PURE__ */ jsxs4("li", { children: [
+        "Metadata:",
+        " ",
+        /* @__PURE__ */ jsx4("a", { class: link, href: `/${encoded}/?meta`, children: metaUrl })
+      ] }),
+      /* @__PURE__ */ jsxs4("li", { children: [
+        "ES module:",
+        " ",
+        /* @__PURE__ */ jsx4("a", { class: link, href: esmUrl, children: esmUrl })
+      ] })
+    ] })
+  ] });
+}
+
+// assets/scripts.ts
+var StatefulComponents = {
+  HomeNav,
+  RunDemo,
+  StatusChecks,
+  UrlBuilder
+};
+hydrateAll(StatefulComponents);
+var themeToggle = document.getElementById("theme-toggle");
+themeToggle?.addEventListener("click", () => {
+  let next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try {
+    localStorage.setItem("unpkg-theme", next);
+  } catch {
+  }
+  let cookie = `unpkg-theme=${next}; path=/; max-age=31536000; SameSite=Lax`;
+  let parts = location.hostname.split(".");
+  if (parts.length >= 2) cookie += `; domain=.${parts.slice(-2).join(".")}`;
+  document.cookie = cookie;
+});
+if (false) {
+  new EventSource("http://localhost:8000/esbuild").addEventListener("change", () => {
+    window.location.reload();
+  });
+}

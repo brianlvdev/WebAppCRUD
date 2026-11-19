@@ -1,27 +1,51 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br" data-theme="corporate">
 <head>
     <meta charset="UTF-8">
-    <title>Editar pessoa</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Pessoa</title>
+    <link href="{{ url_for('static', filename='daisyui.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='themes.css') }}" rel="stylesheet" type="text/css" />
+    <script src="{{ url_for('static', filename='tailwindcss.js') }}"></script>
+
 </head>
-<body>
-    <h1>Editar cadastro</h1>
+<body class="min-h-screen bg-base-200 flex items-center justify-center p-4">
 
-    {% if erro %}
-    <p style="color: red;">{{ erro }}</p>
-    {% endif %}
+    <div class="card w-full max-w-md bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="card-title text-2xl">Editar Cadastro</h1>
+                <span class="badge badge-outline font-mono">Cód: {{ pessoa['pid'] }}</span>
+            </div>
 
-    <form method="POST">
-        <label>Nome:</label>
-        <input type="text" name="nome" value="{{ pessoa['nome'] }}" required><br><br>
+            {% if erro %}
+            <div class="alert alert-error text-sm mb-4">
+                <span>{{ erro }}</span>
+            </div>
+            {% endif %}
 
-        <label>Cargo:</label>
-        <input type="text" name="cargo" value="{{ pessoa['cargo'] }}" required><br><br>
+            <form method="POST" class="space-y-4">
+                <div>
+                    <label class="label">
+                        <span class="label-text">Nome <span class="text-xs opacity-60">(deixe vazio para manter)</span></span>
+                    </label>
+                    <input type="text" name="nome" placeholder="{{ pessoa['nome'] }}" class="input input-bordered w-full">
+                </div>
 
-        <button type="submit">Salvar alterações</button>
-    </form>
+                <div>
+                    <label class="label">
+                        <span class="label-text">Cargo <span class="text-xs opacity-60">(deixe vazio para manter)</span></span>
+                    </label>
+                    <input type="text" name="cargo" placeholder="{{ pessoa['cargo'] }}" class="input input-bordered w-full">
+                </div>
 
-    <br>
-    <a href="{{ url_for('index') }}">Voltar</a>
+                <div class="flex gap-2 pt-2">
+                    <a href="{{ url_for('index') }}" class="btn btn-ghost flex-1">Voltar</a>
+                    <button type="submit" class="btn btn-warning flex-1">Salvar alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </body>
 </html>
