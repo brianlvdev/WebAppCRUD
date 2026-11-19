@@ -1,12 +1,21 @@
+import os
+import shutil
 import sqlite3
 from pathlib import Path
 
-NOME_BANCO = Path(__file__).resolve().parent / "cadastro.db"
+BANCO_LOCAL = Path(__file__).resolve().parent / "cadastro.db"
+
+if os.environ.get("VERCEL"):
+    NOME_BANCO = Path("/tmp/cadastro.db")
+    if not NOME_BANCO.exists() and BANCO_LOCAL.exists():
+        shutil.copy2(BANCO_LOCAL, NOME_BANCO)
+else:
+    NOME_BANCO = BANCO_LOCAL
 
 
 def conectar():
     db = sqlite3.connect(NOME_BANCO)
-    db.row_factory = sqlite3.Row 
+    db.row_factory = sqlite3.Row
     return db
 
 
@@ -20,6 +29,7 @@ def criar_banco():
                 senha TEXT NOT NULL
             );
         """)
+
 
 def listar():
     with conectar() as db:
@@ -55,13 +65,13 @@ def busca_por_nome(termo):
             "SELECT pid, nome, cargo FROM pessoas WHERE nome LIKE ? ORDER BY nome",
             (f"%{termo}%",),
         ).fetchall()
-     
-        
+
+
 def criar_usuario(username, senha_hash):
     with conectar() as db:
         db.execute("INSERT INTO usuarios (username, senha) VALUES (?, ?)", (username, senha_hash))
-     
-        
+
+
 def buscar_usuario(username):
     with conectar() as db:
         return db.execute("SELECT id, username, senha FROM usuarios WHERE username = ?", (username,)).fetchone()
