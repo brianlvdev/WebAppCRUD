@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro de Pessoas</title>
+</head>
+<body>
+    <h1>Pessoas cadastradas</h1>
+
+    <form method="GET" action="{{ url_for('index') }}">
+        <input type="text" name="q" placeholder="Buscar por nome" value="{{ termo }}">
+        <button type="submit">Buscar</button>
+        {% if termo %}
+        <a href="{{ url_for('index') }}">Limpar</a>
+        {% endif %}
+    </form>
+    <br>
+
+    <a href="{{ url_for('cadastrar') }}">+ Nova pessoa</a>
+    <br><br>
+
+    {% if pessoas %}
+    <table border="1" cellpadding="6">
+        <tr>
+            <th>Cód</th>
+            <th>Nome</th>
+            <th>cargo</th>
+            <th>Ações</th>
+        </tr>
+        {% for p in pessoas %}
+        <tr>
+            <td>{{ p["pid"] }}</td>
+            <td>{{ p["nome"] }}</td>
+            <td>{{ p["cargo"] }}</td>
+            <td>
+                <a href="{{ url_for('editar', pid=p['pid']) }}">Editar</a>
+
+                <form method="POST"
+                      action="{{ url_for('excluir', pid=p['pid']) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Tem certeza que deseja excluir?');">
+                    <button type="submit">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Nenhuma pessoa encontrada.</p>
+    {% endif %}
+</body>
+</html>
